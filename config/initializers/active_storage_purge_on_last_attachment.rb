@@ -7,7 +7,10 @@ module ActiveStorage
     def purge
       @purge_mode = :purge
       destroy
-      purge_blob_if_last(:purge) if destroyed?
+      if destroyed?
+        record.touch if record&.persisted?
+        purge_blob_if_last(:purge)
+      end
     ensure
       @purge_mode = nil
     end
@@ -15,7 +18,10 @@ module ActiveStorage
     def purge_later
       @purge_mode = :purge_later
       destroy
-      purge_blob_if_last(:purge_later) if destroyed?
+      if destroyed?
+        record.touch if record&.persisted?
+        purge_blob_if_last(:purge_later)
+      end
     ensure
       @purge_mode = nil
     end
