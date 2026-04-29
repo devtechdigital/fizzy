@@ -32,6 +32,7 @@ __Response:__
     "number": 1,
     "title": "First!",
     "status": "published",
+    "due_on": "2026-05-31",
     "description": "Hello, World!",
     "description_html": "<div class=\"action-text-content\"><p>Hello, World!</p></div>",
     "image_url": null,
@@ -85,6 +86,7 @@ __Response:__
   "number": 1,
   "title": "First!",
   "status": "published",
+  "due_on": "2026-05-31",
   "description": "Hello, World!",
   "description_html": "<div class=\"action-text-content\"><p>Hello, World!</p></div>",
   "image_url": null,
@@ -160,6 +162,7 @@ Creates a new card in a board.
 | `status` | string | No | Initial status: `published` (default), `drafted` |
 | `image` | file | No | Header image for the card |
 | `tag_ids` | array | No | Array of tag IDs to apply to the card |
+| `due_on` | date | No | Target due date (`YYYY-MM-DD`) |
 | `created_at` | datetime | No | Override creation timestamp (ISO 8601 format) |
 | `last_active_at` | datetime | No | Override last activity timestamp (ISO 8601 format) |
 
@@ -189,6 +192,7 @@ Updates a card.
 | `status` | string | No | Card status: `drafted`, `published` |
 | `image` | file | No | Header image for the card |
 | `tag_ids` | array | No | Array of tag IDs to apply to the card |
+| `due_on` | date | No | Target due date (`YYYY-MM-DD`) |
 | `last_active_at` | datetime | No | Override last activity timestamp (ISO 8601 format) |
 
 __Request:__

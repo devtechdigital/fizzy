@@ -186,15 +186,18 @@ class CardsControllerTest < ActionDispatch::IntegrationTest
     assert_equal card.title, @response.parsed_body["title"]
     assert_equal card.closed?, @response.parsed_body["closed"]
     assert_equal card.postponed?, @response.parsed_body["postponed"]
+    assert_equal card.due_on.to_s, @response.parsed_body["due_on"]
     assert_equal 2, @response.parsed_body["steps"].size
     assert_equal card_comments_url(card), @response.parsed_body["comments_url"]
     assert_equal card_reactions_url(card), @response.parsed_body["reactions_url"]
   end
 
   test "create as JSON" do
+    due_on = Date.new(2026, 5, 31)
+
     assert_difference -> { Card.count }, +1 do
       post board_cards_path(boards(:writebook)),
-        params: { card: { title: "My new card", description: "Big if true" } },
+        params: { card: { title: "My new card", description: "Big if true", due_on: due_on } },
         as: :json
       assert_response :created
     end
@@ -202,9 +205,11 @@ class CardsControllerTest < ActionDispatch::IntegrationTest
     card = Card.last
     assert_equal card_path(card, format: :json), @response.headers["Location"]
     assert_equal "My new card", @response.parsed_body["title"]
+    assert_equal due_on.to_s, @response.parsed_body["due_on"]
 
     assert_equal "My new card", card.title
     assert_equal "Big if true", card.description.to_plain_text
+    assert_equal due_on, card.due_on
   end
 
   test "create as JSON with custom created_at" do
@@ -286,11 +291,14 @@ class CardsControllerTest < ActionDispatch::IntegrationTest
 
   test "update as JSON" do
     card = cards(:logo)
+    due_on = Date.new(2026, 6, 15)
 
-    put card_path(card, format: :json), params: { card: { title: "Update test" } }
+    put card_path(card, format: :json), params: { card: { title: "Update test", due_on: due_on } }
     assert_response :success
 
     assert_equal "Update test", card.reload.title
+    assert_equal due_on, card.due_on
+    assert_equal due_on.to_s, @response.parsed_body["due_on"]
   end
 
   test "delete as JSON" do

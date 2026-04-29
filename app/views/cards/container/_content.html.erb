@@ -19,6 +19,10 @@
               data: { autoresize_target: "textarea", action: "input->autoresize#resize auto-save#change blur->auto-save#submit keydown.enter->auto-save#submit:prevent" } %>
       <% end %>
     </h1>
+    <div class="margin-block-end-half">
+      <%= form.label :due_on, "Target date", class: "txt-small txt-subtle" %>
+      <%= form.date_field :due_on, class: "input txt-small", data: { action: "change->auto-save#change blur->auto-save#submit" } %>
+    </div>
 
     <%= form.rich_textarea :description, class: "card__description lexxy-content",
           placeholder: "Add some notes, context, pictures, or video about this…",

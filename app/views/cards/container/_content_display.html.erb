@@ -2,6 +2,12 @@
   <%= link_to card_html_title(card), edit_card_path(card), class: "card__title-link" %>
 </h1>
 
+<% if card.due_on.present? %>
+  <p class="txt-small txt-subtle margin-block-start-none margin-block-end-half">
+    Target date: <strong><%= card.due_on.strftime("%b %-d, %Y") %></strong>
+  </p>
+<% end %>
+
 <% unless card.description.blank? %>
   <div class="card__description lexxy-content" data-controller="syntax-highlight retarget-links">
     <%= card.description %>
