@@ -70,6 +70,11 @@ class FizzyClient:
         resp = self.session.post(self._url(path), json=data)
         return self._handle_response(resp)
 
+    def put(self, path: str, data: dict | None = None):
+        """PUT request."""
+        resp = self.session.put(self._url(path), json=data)
+        return self._handle_response(resp)
+
     def patch(self, path: str, data: dict | None = None):
         """PATCH request."""
         resp = self.session.patch(self._url(path), json=data)

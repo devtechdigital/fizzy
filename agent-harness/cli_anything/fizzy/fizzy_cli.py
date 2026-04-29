@@ -252,6 +252,24 @@ def cards():
     pass
 
 
+@cards.command("list")
+@click.option("--board-id", default=None, help="Filter by board ID")
+@click.option("--assignee-id", default=None, help="Filter by assignee user ID")
+@click.option("--indexed-by", default=None, help="Filter: all, closed, not_now, stalled, postponing_soon, golden")
+@click.pass_context
+def cards_list(ctx, board_id, assignee_id, indexed_by):
+    """List cards with optional filters."""
+    client = _get_client(ctx)
+    as_json = ctx.obj.get("as_json", False)
+    try:
+        board_ids = [board_id] if board_id else None
+        assignee_ids = [assignee_id] if assignee_id else None
+        data = cards_mod.list_cards(client, board_ids=board_ids, assignee_ids=assignee_ids, indexed_by=indexed_by)
+        output(data, format_cards, as_json)
+    except FizzyAPIError as e:
+        _handle_api_error(e)
+
+
 @cards.command("show")
 @click.argument("card_number")
 @click.pass_context
@@ -376,14 +394,41 @@ def cards_assign(ctx, card_number, user_id):
 
 @cards.command("unassign")
 @click.argument("card_number")
-@click.argument("assignment_id")
+@click.argument("user_id")
 @click.pass_context
-def cards_unassign(ctx, card_number, assignment_id):
-    """Remove a user assignment from a card."""
+def cards_unassign(ctx, card_number, user_id):
+    """Remove a user assignment from a card (toggles off)."""
     client = _get_client(ctx)
     try:
-        cards_mod.unassign_user(client, card_number, assignment_id)
-        click.echo(f"Assignment removed from card #{card_number}.")
+        cards_mod.unassign_user(client, card_number, user_id)
+        click.echo(f"User unassigned from card #{card_number}.")
+    except FizzyAPIError as e:
+        _handle_api_error(e)
+
+
+@cards.command("triage")
+@click.argument("card_number")
+@click.argument("column_id")
+@click.pass_context
+def cards_triage(ctx, card_number, column_id):
+    """Move a card into a column (triage)."""
+    client = _get_client(ctx)
+    try:
+        cards_mod.triage_card(client, card_number, column_id)
+        click.echo(f"Card #{card_number} triaged into column.")
+    except FizzyAPIError as e:
+        _handle_api_error(e)
+
+
+@cards.command("untriage")
+@click.argument("card_number")
+@click.pass_context
+def cards_untriage(ctx, card_number):
+    """Send a card back to triage (Maybe?)."""
+    client = _get_client(ctx)
+    try:
+        cards_mod.untriage_card(client, card_number)
+        click.echo(f"Card #{card_number} sent back to triage.")
     except FizzyAPIError as e:
         _handle_api_error(e)
 
