@@ -6,6 +6,18 @@ This file provides guidance to AI coding agents working with this repository.
 
 Fizzy is a collaborative project management and issue tracking application built by 37signals/Basecamp. It's a kanban-style tool for teams to create and manage cards (tasks/issues) across boards, organize work into columns representing workflow stages, and collaborate via comments, mentions, and assignments.
 
+## Fork-specific notes (read first)
+
+This is `devtechdigital/fizzy`, a fork of `basecamp/fizzy`. Key things to know:
+
+- **Runtime is on `mini1`, not this Mac.** The live `tasks.baum.to` instance runs as a Docker container on mini1 (`extmini-01`, 192.168.20.27), Colima-managed, port 3006 → container :80, with data in the `fizzy-data` Docker volume. This local clone is for **editing code only**. Running `bin/dev` here spins up an isolated dev instance with no relation to production.
+- **Deploy is custom (not Kamal).** Despite `config/deploy*.yml` shipping kamal targets, this fork deploys via a manual `git push origin main` → SSH into mini1 → `docker build` → cutover. See the `mini1 cloudflared tunnel inventory + restart procedure` and `Fizzy deploy workflow` memories in the **`fizzy` Muninn vault** for the full procedure (keychain unlock, env capture, fizzy_old rollback dance, etc.).
+- **Cloudflared tunnel runs on mini1**, not here. tasks.baum.to → `https://tasks.baum.to` → cloudflared on mini1 → `localhost:3006` (the container). Tunnel is a system LaunchDaemon (`/Library/LaunchDaemons/com.kevin.cloudflared-fizzy-tasks.plist`) — autostarts on boot, no GUI login required. Same arrangement for `vault.baum.to` (vaultwarden) and `filament.qrs.ing` (filament-home), all on mini1.
+- **Upstream cadence.** Track `basecamp/fizzy` `main`. Don't bump `.ruby-version` ahead of upstream — divergence creates merge friction every sync. Upstream pin is the source of truth; the Dockerfile reads `ARG RUBY_VERSION` from `.ruby-version` and Docker on mini1 will install whatever it points to.
+- **When debugging tasks.baum.to outages, debug mini1 first** — not this Mac. Containers usually stay healthy; the common failure mode is the cloudflared LaunchDaemon dying, leaving 530 (origin unreachable) or 1033 (tunnel disconnected).
+
+For the full operating context — what runs where, how to deploy, restart procedures, MySQL/SQLite reality, env vars, prior incidents — search the `fizzy` Muninn vault: `mcp__muninn__muninn_recall(vault="fizzy", context=[...])`. The `default` vault has minimal Fizzy info and led to a multi-hour wrong-machine debug once. Don't repeat that.
+
 ## Development Commands
 
 ### Setup and Server
@@ -52,11 +64,28 @@ bin/kamal deploy             # Deploy (requires 1Password CLI for secrets)
 
 ## Deploy
 
-Default branch: `main`
-Pre-deploy: `bin/rails saas:enable`
-Deploy: `bin/kamal deploy -d <destination>`
-Destinations: production, staging, beta, beta1, beta2, beta3, beta4
-Note: `beta` is a template requiring `BETA_NUMBER` env var; typical targets are `beta1`-`beta4`.
+Default branch: `main`. Live target: `tasks.baum.to` (Docker container on mini1).
+
+**Quick path** (full details in `fizzy` Muninn vault → memory "Fizzy deploy workflow"):
+
+1. **On this Mac** — `git fetch upstream && git merge upstream/main` (resolve conflicts in cards files), make atomic commits, `git push origin main`.
+2. **On mini1** — `ssh -t mini1` and run **one** chained command (keychain must unlock in the same session):
+   ```
+   security unlock-keychain ~/Library/Keychains/login.keychain-db && \
+     cd ~/fizzy-build && git pull && \
+     /usr/local/bin/docker build -t fizzy:<tag> . 2>&1 | tee /tmp/fizzy-build.log | tail -40
+   ```
+3. **Cutover** (~30s downtime, fizzy-data volume preserved):
+   ```
+   docker inspect fizzy --format '{{range .Config.Env}}{{println .}}{{end}}' > /tmp/fizzy.env
+   docker stop fizzy && docker rename fizzy fizzy_old
+   docker run -d --name fizzy --env-file /tmp/fizzy.env -p 3006:80 \
+     -v fizzy-data:/rails/storage --restart unless-stopped fizzy:<tag>
+   ```
+4. **Rollback** if anything's wrong: `docker stop fizzy && docker rm fizzy && docker rename fizzy_old fizzy && docker start fizzy`.
+5. After 24–48h of confidence: `docker rm fizzy_old`.
+
+**Upstream's kamal deploy** (`bin/kamal deploy -d production|beta1-4`) is configured in `config/deploy*.yml` but **not used by this fork**. Ignore unless you're cutting a parallel hosted deployment.
 
 ## Architecture Overview
 
